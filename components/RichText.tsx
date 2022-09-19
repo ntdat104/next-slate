@@ -1,27 +1,46 @@
 import isHotkey from "is-hotkey";
 import React from "react";
 import {
-    createEditor,
-    Descendant, Editor, Element as SlateElement, Transforms
+  createEditor,
+  Descendant,
+  Editor,
+  Element as SlateElement,
+  Transforms,
 } from "slate";
 import { withHistory } from "slate-history";
 import {
-    Editable, RenderElementProps,
-    RenderLeafProps, Slate, useSlate, withReact
+  Editable,
+  RenderElementProps,
+  RenderLeafProps,
+  Slate,
+  useSlate,
+  withReact,
 } from "slate-react";
+import {
+  BlockType,
+  CustomEditor,
+  CustomElementType,
+  MarkType,
+} from "../custom-type";
 
-import { CustomEditor } from "../custom-type";
-import { Button, Icon, Toolbar } from "./components";
+type HotKeys = {
+  [key: string]: MarkType;
+};
 
-const HOTKEYS: any = {
+const HOTKEYS: HotKeys = {
   "mod+b": "bold",
   "mod+i": "italic",
   "mod+u": "underline",
   "mod+`": "code",
 };
 
-const LIST_TYPES = ["numbered-list", "bulleted-list"];
-const TEXT_ALIGN_TYPES = ["left", "center", "right", "justify"];
+const LIST_TYPES: CustomElementType[] = ["numbered-list", "bulleted-list"];
+const TEXT_ALIGN_TYPES: CustomElementType[] = [
+  "left",
+  "center",
+  "right",
+  "justify",
+];
 
 const RichText: React.FC = () => {
   const [value, setValue] = React.useState<Descendant[]>([
@@ -77,23 +96,142 @@ const RichText: React.FC = () => {
     setValue(value);
   }, []);
 
+  const markList = React.useMemo(
+    () => [
+      {
+        format: "bold",
+        render: (active: boolean) => (
+          <button style={{ color: active ? "red" : "blue" }}>{`Bold`}</button>
+        ),
+      },
+      {
+        format: "italic",
+        render: (active: boolean) => (
+          <button style={{ color: active ? "red" : "blue" }}>{`Italic`}</button>
+        ),
+      },
+      {
+        format: "underline",
+        render: (active: boolean) => (
+          <button
+            style={{ color: active ? "red" : "blue" }}
+          >{`Underline`}</button>
+        ),
+      },
+      {
+        format: "code",
+        render: (active: boolean) => (
+          <button style={{ color: active ? "red" : "blue" }}>{`Code`}</button>
+        ),
+      },
+    ],
+    []
+  );
+
+  const blockList = React.useMemo(
+    () => [
+      {
+        format: "paragraph",
+        render: (active: boolean) => (
+          <button
+            style={{ color: active ? "red" : "blue" }}
+          >{`Paragraph`}</button>
+        ),
+      },
+      {
+        format: "heading-one",
+        render: (active: boolean) => (
+          <button
+            style={{ color: active ? "red" : "blue" }}
+          >{`Heading-one`}</button>
+        ),
+      },
+      {
+        format: "heading-two",
+        render: (active: boolean) => (
+          <button
+            style={{ color: active ? "red" : "blue" }}
+          >{`Heading-two`}</button>
+        ),
+      },
+      {
+        format: "block-quote",
+        render: (active: boolean) => (
+          <button
+            style={{ color: active ? "red" : "blue" }}
+          >{`Block-quote`}</button>
+        ),
+      },
+      {
+        format: "numbered-list",
+        render: (active: boolean) => (
+          <button
+            style={{ color: active ? "red" : "blue" }}
+          >{`Numbered-list`}</button>
+        ),
+      },
+      {
+        format: "bulleted-list",
+        render: (active: boolean) => (
+          <button
+            style={{ color: active ? "red" : "blue" }}
+          >{`Bulleted-list`}</button>
+        ),
+      },
+      {
+        format: "list-item",
+        render: (active: boolean) => (
+          <button
+            style={{ color: active ? "red" : "blue" }}
+          >{`List-item`}</button>
+        ),
+      },
+      {
+        format: "left",
+        render: (active: boolean) => (
+          <button
+            style={{ color: active ? "red" : "blue" }}
+          >{`Align-left`}</button>
+        ),
+      },
+      {
+        format: "center",
+        render: (active: boolean) => (
+          <button
+            style={{ color: active ? "red" : "blue" }}
+          >{`Align-center`}</button>
+        ),
+      },
+      {
+        format: "right",
+        render: (active: boolean) => (
+          <button
+            style={{ color: active ? "red" : "blue" }}
+          >{`Align-right`}</button>
+        ),
+      },
+      {
+        format: "justify",
+        render: (active: boolean) => (
+          <button
+            style={{ color: active ? "red" : "blue" }}
+          >{`Align-justify`}</button>
+        ),
+      },
+    ],
+    []
+  );
+
   return (
     <Slate editor={editor} value={value} onChange={handleChange}>
-      <Toolbar>
-        <MarkButton format="bold" icon="bold" />
-        <MarkButton format="italic" icon="italic" />
-        <MarkButton format="underline" icon="underline" />
-        <MarkButton format="code" icon="code" />
-        <BlockButton format="heading-one" icon="heading-one" />
-        <BlockButton format="heading-two" icon="heading-two" />
-        <BlockButton format="block-quote" icon="block-quote" />
-        <BlockButton format="numbered-list" icon="numbered-list" />
-        <BlockButton format="bulleted-list" icon="bulleted-list" />
-        <BlockButton format="left" icon="align_left" />
-        <BlockButton format="center" icon="align_center" />
-        <BlockButton format="right" icon="align_right" />
-        <BlockButton format="justify" icon="align_justify" />
-      </Toolbar>
+      <div>
+        {markList.map((item: any, index: number) => (
+          <MarkButton key={index} format={item.format} render={item.render} />
+        ))}
+        {blockList.map((item: any, index: number) => (
+          <BlockButton key={index} format={item.format} render={item.render} />
+        ))}
+      </div>
       <Editable
         renderElement={renderElement}
         renderLeaf={renderLeaf}
@@ -102,7 +240,7 @@ const RichText: React.FC = () => {
         autoFocus
         onKeyDown={(event: React.KeyboardEvent<HTMLDivElement>) => {
           for (const hotkey in HOTKEYS) {
-            if (isHotkey(hotkey, event as any)) {
+            if (isHotkey(hotkey, event)) {
               event.preventDefault();
               const mark = HOTKEYS[hotkey];
               toggleMark(editor, mark);
@@ -114,7 +252,7 @@ const RichText: React.FC = () => {
   );
 };
 
-const toggleBlock = (editor: CustomEditor, format: any) => {
+const toggleBlock = (editor: CustomEditor, format: BlockType) => {
   const isActive = isBlockActive(
     editor,
     format,
@@ -148,7 +286,7 @@ const toggleBlock = (editor: CustomEditor, format: any) => {
   }
 };
 
-const toggleMark = (editor: any, format: any) => {
+const toggleMark = (editor: CustomEditor, format: MarkType) => {
   const isActive = isMarkActive(editor, format);
 
   if (isActive) {
@@ -158,7 +296,11 @@ const toggleMark = (editor: any, format: any) => {
   }
 };
 
-const isBlockActive = (editor: any, format: any, blockType = "type") => {
+const isBlockActive = (
+  editor: CustomEditor,
+  format: BlockType,
+  blockType: "align" | "type" = "type"
+) => {
   const { selection } = editor;
   if (!selection) return false;
 
@@ -166,19 +308,23 @@ const isBlockActive = (editor: any, format: any, blockType = "type") => {
     Editor.nodes(editor, {
       at: Editor.unhangRange(editor, selection),
       match: (n) =>
-        !Editor.isEditor(n) && SlateElement.isElement(n) && n.type === format,
+        !Editor.isEditor(n) &&
+        SlateElement.isElement(n) &&
+        n[blockType] === format,
     })
   );
 
   return !!match;
 };
 
-const isMarkActive = (editor: any, format: any) => {
-  const marks: any = Editor.marks(editor);
+const isMarkActive = (editor: CustomEditor, format: MarkType) => {
+  const marks = Editor.marks(editor);
   return marks ? marks[format] === true : false;
 };
 
-const Element = ({ attributes, children, element }: any) => {
+const Element: React.FC<RenderElementProps> = (props) => {
+  const { attributes, children, element } = props;
+
   const style = { textAlign: element.align };
   switch (element.type) {
     case "block-quote":
@@ -217,6 +363,12 @@ const Element = ({ attributes, children, element }: any) => {
           {children}
         </ol>
       );
+    case "paragraph":
+      return (
+        <p style={style} {...attributes}>
+          {children}
+        </p>
+      );
     default:
       return (
         <p style={style} {...attributes}>
@@ -226,7 +378,10 @@ const Element = ({ attributes, children, element }: any) => {
   }
 };
 
-const Leaf = ({ attributes, children, leaf }: RenderLeafProps) => {
+const Leaf: React.FC<RenderLeafProps> = (props) => {
+  const { attributes, leaf } = props;
+  let { children } = props;
+
   if (leaf.bold) {
     children = <strong>{children}</strong>;
   }
@@ -246,38 +401,57 @@ const Leaf = ({ attributes, children, leaf }: RenderLeafProps) => {
   return <span {...attributes}>{children}</span>;
 };
 
-const BlockButton = ({ format, icon }: any) => {
+type BlockButtonProps = {
+  format: BlockType;
+  render: (active: boolean) => JSX.Element;
+};
+
+const BlockButton: React.FC<BlockButtonProps> = (props) => {
+  const { format, render } = props;
   const editor = useSlate();
+
+  const handleMouseDown = React.useCallback(
+    (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+      event.preventDefault();
+      toggleBlock(editor, format);
+    },
+    []
+  );
+
   return (
-    <Button
-      active={isBlockActive(
-        editor,
-        format,
-        TEXT_ALIGN_TYPES.includes(format) ? "align" : "type"
+    <div style={{ display: "inline-block" }} onMouseDown={handleMouseDown}>
+      {render(
+        isBlockActive(
+          editor,
+          format,
+          TEXT_ALIGN_TYPES.includes(format) ? "align" : "type"
+        )
       )}
-      onClick={(event: any) => {
-        event.preventDefault();
-        toggleBlock(editor, format);
-      }}
-    >
-      <Icon>{icon}</Icon>
-    </Button>
+    </div>
   );
 };
 
-const MarkButton = ({ format, icon }: any) => {
+type MarkButtonProps = {
+  format: MarkType;
+  render: (active: boolean) => JSX.Element;
+};
+
+const MarkButton: React.FC<MarkButtonProps> = (props) => {
+  const { format, render } = props;
   const editor = useSlate();
 
+  const handleMouseDown = React.useCallback(
+    (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+      event.preventDefault();
+      toggleMark(editor, format);
+    },
+    []
+  );
+
   return (
-    <Button
-      active={isMarkActive(editor, format)}
-      onClick={(event: any) => {
-        event.preventDefault();
-        toggleMark(editor, format);
-      }}
-    >
-      <Icon>{icon}</Icon>
-    </Button>
+    <div style={{ display: "inline-block" }} onMouseDown={handleMouseDown}>
+      {render(isMarkActive(editor, format))}
+    </div>
   );
 };
 
