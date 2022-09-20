@@ -1,11 +1,11 @@
 import type { NextPage } from "next";
-import RichText from "../components/RichText";
+import SlateEditor from "../modules/SlateEditor";
 
 const Home: NextPage = () => {
   return (
-    <>
-      <RichText />
-    </>
+    <div style={{ maxWidth: 800, margin: 10 }}>
+      <SlateEditor />
+    </div>
   );
 };
 
