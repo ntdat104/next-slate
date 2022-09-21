@@ -41,6 +41,24 @@ const Home: NextPage = () => {
     },
     {
       type: "paragraph",
+      children: [
+        { text: "Try mentioning characters, like " },
+        {
+          type: "mention",
+          character: "R2-D2",
+          children: [{ text: "" }],
+        },
+        { text: " or " },
+        {
+          type: "mention",
+          character: "Mace Windu",
+          children: [{ text: "" }],
+        },
+        { text: "!" },
+      ],
+    },
+    {
+      type: "paragraph",
       align: "center",
       children: [{ text: "Try it out for yourself!" }],
     },

@@ -17,7 +17,8 @@ export type MarkType =
   | "code"
   | "strikethrough"
   | "link"
-  | "image";
+  | "image"
+  | "mention";
 
 export type BlockType =
   | "paragraph"
@@ -37,6 +38,7 @@ export type CustomElementType = MarkType | BlockType | AlignType | ListType;
 
 export type CustomElement = {
   type?: CustomElementType;
+  character?: string;
   align?: AlignType;
   url?: string;
   children: Descendant[];

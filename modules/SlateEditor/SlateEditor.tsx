@@ -13,6 +13,7 @@ import { withHistory } from "slate-history";
 import { jsx } from "slate-hyperscript";
 import {
   Editable,
+  ReactEditor,
   RenderElementProps,
   RenderLeafProps,
   Slate,
@@ -30,6 +31,8 @@ import {
   MarkType,
 } from "../../custom-type";
 import imageExtensions from "image-extensions";
+import CHARACTERS from "./Characters.json";
+import ReactDOM from "react-dom";
 
 const ELEMENT_TAGS: any = {
   A: (el: any) => ({ type: "link", url: el.getAttribute("href") }),
@@ -84,6 +87,34 @@ interface Props {
 
 const SlateEditor: React.FC<Props> = (props) => {
   const { value, setValue } = props;
+  const ref = React.useRef<HTMLDivElement | null>();
+  const [target, setTarget] = React.useState<Range | null>(null);
+  const [index, setIndex] = React.useState(0);
+  const [search, setSearch] = React.useState("");
+
+  const editor = React.useMemo<CustomEditor>(
+    () =>
+      withHtml(
+        withMentions(
+          withImages(withLink(withHistory(withReact(createEditor()))))
+        )
+      ),
+    []
+  );
+
+  const chars = CHARACTERS.filter((c) =>
+    c.toLowerCase().startsWith(search.toLowerCase())
+  ).slice(0, 10);
+
+  React.useEffect(() => {
+    if (target && chars.length > 0) {
+      const el = ref.current;
+      const domRange = ReactEditor.toDOMRange(editor, target);
+      const rect = domRange.getBoundingClientRect();
+      el!.style.top = `${rect.top + window.pageYOffset + 24}px`;
+      el!.style.left = `${rect.left + window.pageXOffset}px`;
+    }
+  }, [chars.length, editor, index, search, target]);
 
   const renderElement = React.useCallback(
     (props: RenderElementProps) => <Element {...props} />,
@@ -93,13 +124,66 @@ const SlateEditor: React.FC<Props> = (props) => {
     (props: RenderLeafProps) => <Leaf {...props} />,
     []
   );
-  const editor = React.useMemo<CustomEditor>(
-    () =>
-      withHtml(withImages(withLink(withHistory(withReact(createEditor()))))),
-    []
-  );
 
+  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    for (const hotkey in HOTKEYS) {
+      if (isHotkey(hotkey, event)) {
+        event.preventDefault();
+        const mark = HOTKEYS[hotkey];
+        toggleMark(editor, mark);
+      }
+    }
+
+    if (target) {
+      switch (event.key) {
+        case "ArrowDown":
+          event.preventDefault();
+          const prevIndex = index >= chars.length - 1 ? 0 : index + 1;
+          setIndex(prevIndex);
+          break;
+        case "ArrowUp":
+          event.preventDefault();
+          const nextIndex = index <= 0 ? chars.length - 1 : index - 1;
+          setIndex(nextIndex);
+          break;
+        case "Tab":
+        case "Enter":
+          event.preventDefault();
+          Transforms.select(editor, target);
+          insertMention(editor, chars[index]);
+          setTarget(null);
+          break;
+        case "Escape":
+          event.preventDefault();
+          setTarget(null);
+          break;
+      }
+    }
+  };
   const handleChange = React.useCallback((value: Descendant[]) => {
+    const { selection } = editor;
+
+    if (selection && Range.isCollapsed(selection)) {
+      const [start] = Range.edges(selection);
+      const wordBefore = Editor.before(editor, start, { unit: "word" });
+      const before = wordBefore && Editor.before(editor, wordBefore);
+      const beforeRange = before && Editor.range(editor, before, start);
+      const beforeText = beforeRange && Editor.string(editor, beforeRange);
+      const beforeMatch = beforeText && beforeText.match(/^@(\w+)$/);
+      const after = Editor.after(editor, start);
+      const afterRange = Editor.range(editor, start, after);
+      const afterText = Editor.string(editor, afterRange);
+      const afterMatch = afterText.match(/^(\s|$)/);
+
+      if (beforeMatch && afterMatch) {
+        setTarget(beforeRange);
+        setSearch(beforeMatch[1]);
+        setIndex(0);
+        return;
+      }
+    }
+
+    setTarget(null);
     setValue(value);
   }, []);
 
@@ -254,18 +338,41 @@ const SlateEditor: React.FC<Props> = (props) => {
         renderElement={renderElement}
         renderLeaf={renderLeaf}
         placeholder="Enter some rich text…"
-        spellCheck
-        autoFocus
-        onKeyDown={(event: React.KeyboardEvent<HTMLDivElement>) => {
-          for (const hotkey in HOTKEYS) {
-            if (isHotkey(hotkey, event)) {
-              event.preventDefault();
-              const mark = HOTKEYS[hotkey];
-              toggleMark(editor, mark);
-            }
-          }
-        }}
+        spellCheck={true}
+        autoFocus={true}
+        onKeyDown={onKeyDown}
       />
+      {target && chars.length > 0 && (
+        <Portal>
+          <div
+            ref={ref as any}
+            style={{
+              top: "-9999px",
+              left: "-9999px",
+              position: "absolute",
+              zIndex: 1,
+              padding: "3px",
+              background: "white",
+              borderRadius: "4px",
+              boxShadow: "0 1px 5px rgba(0,0,0,.2)",
+            }}
+            data-cy="mentions-portal"
+          >
+            {chars.map((char, i) => (
+              <div
+                key={char}
+                style={{
+                  padding: "1px 3px",
+                  borderRadius: "3px",
+                  background: i === index ? "#B4D5FF" : "transparent",
+                }}
+              >
+                {char}
+              </div>
+            ))}
+          </div>
+        </Portal>
+      )}
     </Slate>
   );
 };
@@ -356,6 +463,8 @@ const Element: React.FC<RenderElementProps> = (props) => {
       );
     case "image":
       return <ImageElement {...props} />;
+    case "mention":
+      return <Mention {...props} />;
     default:
       return (
         <p style={style} {...attributes}>
@@ -803,4 +912,64 @@ const insertImage = (editor: CustomEditor, url: string) => {
 };
 
 // -------------------- END_IMAGE_PLUGIN --------------------//
+
+// -------------------- START_MENTION_PLUGIN --------------------//
+
+export const Portal: React.FC<{ children: React.ReactNode }> = (props) => {
+  const { children } = props;
+  return typeof document === "object"
+    ? ReactDOM.createPortal(children, document.body)
+    : null;
+};
+
+const Mention: React.FC<RenderElementProps> = (props) => {
+  const { attributes, children, element } = props;
+  const selected = useSelected();
+  const focused = useFocused();
+  return (
+    <span
+      {...attributes}
+      contentEditable={false}
+      data-cy={`mention-${element.character?.replace(" ", "-")}`}
+      style={{
+        padding: "3px 3px 2px",
+        margin: "0 1px",
+        verticalAlign: "baseline",
+        display: "inline-block",
+        borderRadius: "4px",
+        backgroundColor: "#eee",
+        fontSize: "0.9em",
+        boxShadow: selected && focused ? "0 0 0 2px #B4D5FF" : "none",
+      }}
+    >
+      {children}@{element.character}
+    </span>
+  );
+};
+
+const withMentions = (editor: CustomEditor) => {
+  const { isInline, isVoid } = editor;
+
+  editor.isInline = (element) => {
+    return element.type === "mention" ? true : isInline(element);
+  };
+
+  editor.isVoid = (element) => {
+    return element.type === "mention" ? true : isVoid(element);
+  };
+
+  return editor;
+};
+
+const insertMention = (editor: CustomEditor, character: string) => {
+  const mention: CustomElement = {
+    type: "mention",
+    character,
+    children: [{ text: "" }],
+  };
+  Transforms.insertNodes(editor, mention);
+  Transforms.move(editor);
+};
+
+// -------------------- END_MENTION_PLUGIN --------------------//
 export default SlateEditor;
