@@ -811,6 +811,7 @@ const wrapLink = (editor: CustomEditor, url: string) => {
 
   if (isCollapsed) {
     Transforms.insertNodes(editor, link);
+    Transforms.move(editor, { unit: "offset" });
   } else {
     Transforms.wrapNodes(editor, link, { split: true });
     Transforms.collapse(editor, { edge: "end" });
