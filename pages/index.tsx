@@ -49,13 +49,13 @@ const Home: NextPage = () => {
         { text: "Try mentioning characters, like " },
         {
           type: "mention",
-          character: "R2-D2",
+          character: "thaokv",
           children: [{ text: "" }],
         },
         { text: " or " },
         {
           type: "mention",
-          character: "Mace Windu",
+          character: "ntdat104",
           children: [{ text: "" }],
         },
         { text: "!" },

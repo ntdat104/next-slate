@@ -111,12 +111,14 @@ const SlateEditor: React.FC<Props> = (props) => {
 
   const chars = React.useMemo(
     () =>
-      characters.map((item: any) => ({
-        id: item?.id,
-        username: item?.login,
-        fullName: item?.login.toUpperCase(),
-        avatarUrl: item?.avatar_url,
-      })),
+      characters
+        ? characters?.map((item: any) => ({
+            id: item?.id,
+            username: item?.login,
+            fullName: item?.login.toUpperCase(),
+            avatarUrl: item?.avatar_url,
+          }))
+        : [],
     [characters]
   );
 
@@ -352,6 +354,14 @@ const SlateEditor: React.FC<Props> = (props) => {
     []
   );
 
+  const handleOnclickMention = () => {
+    if (target) {
+      Transforms.select(editor, target);
+      insertMention(editor, chars[index]?.username);
+      setTarget(null);
+    }
+  };
+
   return (
     <Slate editor={editor} value={value} onChange={handleChange}>
       <div>
@@ -376,31 +386,30 @@ const SlateEditor: React.FC<Props> = (props) => {
       {target && chars.length > 0 && (
         <Portal>
           <div
+            className={cx("portal__mention")}
             ref={ref as any}
-            style={{
-              top: "-9999px",
-              left: "-9999px",
-              position: "absolute",
-              zIndex: 1,
-              padding: "3px",
-              background: "white",
-              borderRadius: "4px",
-              boxShadow: "0 1px 5px rgba(0,0,0,.2)",
-            }}
             data-cy="mentions-portal"
           >
             {chars.map((char: any, i: number) => (
               <div
+                className={cx("portal__item_mention", {
+                  active: i === index,
+                })}
                 key={i}
-                style={{
-                  padding: "1px 3px",
-                  borderRadius: "3px",
-                  background: i === index ? "#B4D5FF" : "transparent",
-                }}
+                onClick={handleOnclickMention}
               >
-                <h1>{char.fullName}</h1>
-                <p>{char.username}</p>
-                <img src={char.avatarUrl} />
+                <div className={cx("tooltip__image")}>
+                  <img
+                    src={
+                      char?.avatarUrl ||
+                      `https://cdn.simplize.vn/simplizevn/static/avatar/avatar_default.png`
+                    }
+                  />
+                </div>
+                <div className={cx("tooltip__profile")}>
+                  <h4>{char?.fullName?.toUpperCase() || `Default`}</h4>
+                  <p>{char?.username || `default`}</p>
+                </div>
               </div>
             ))}
           </div>
@@ -963,24 +972,64 @@ const Mention: React.FC<RenderElementProps> = (props) => {
 
   return (
     <span {...attributes} contentEditable={false}>
-      <Link
-        href={`https://api.github.com/users/${element.character}`}
-        passHref={true}
-      >
-        <a
-          className={cx("mention")}
-          target={`_blank`}
-          style={{
-            boxShadow: selected && focused ? "0 0 0 2px #B4D5FF" : "none",
-          }}
+      <span className={cx("mention")}>
+        <Link
+          href={`https://api.github.com/users/${element.character}`}
+          passHref={true}
         >
-          {children}@{element.character}
-          <div className={"tooltip"}>
-            <p>{element.character}</p>
-          </div>
-        </a>
-      </Link>
+          <a
+            className={cx("mention_link")}
+            target={`_blank`}
+            style={{
+              boxShadow: selected && focused ? "0 0 0 2px #B4D5FF" : "none",
+            }}
+          >
+            {children}@{element.character}
+          </a>
+        </Link>
+        <MentionTooltip username={element.character as string} />
+      </span>
     </span>
+  );
+};
+
+const MentionTooltip: React.FC<{
+  username: string;
+}> = (props): JSX.Element => {
+  const { username } = props;
+  const [user, setUser] = React.useState<any>();
+
+  React.useEffect(() => {
+    if (!username) return;
+
+    (async () => {
+      try {
+        const response = await fetch(
+          `https://api.github.com/users/${username}`
+        );
+        const data = await response.json();
+        setUser(data);
+      } catch (error) {
+        console.log(error);
+      }
+    })();
+  }, [username]);
+
+  return (
+    <div className={cx("tooltip__mention")}>
+      <div className={cx("tooltip__image")}>
+        <img
+          src={
+            user?.avatar_url ||
+            `https://cdn.simplize.vn/simplizevn/static/avatar/avatar_default.png`
+          }
+        />
+      </div>
+      <div className={cx("tooltip__profile")}>
+        <h4>{user?.login?.toUpperCase() || `Default`}</h4>
+        <p>{user?.login || `default`}</p>
+      </div>
+    </div>
   );
 };
 
