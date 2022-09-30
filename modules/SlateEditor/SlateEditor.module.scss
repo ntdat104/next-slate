@@ -1,0 +1,31 @@
+.mention {
+  position: relative;
+  padding: 3px 3px 2px;
+  margin: 0px 1px;
+  vertical-align: baseline;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: #eee;
+  font-size: 16px;
+
+  div[class="tooltip"] {
+    visibility: hidden;
+    position: absolute;
+    left: 0;
+    top: 30px;
+    padding: 5px;
+    background-color: black;
+    color: white;
+    z-index: 1;
+
+    p {
+      margin: 0;
+    }
+  }
+
+  &:hover {
+    div[class="tooltip"] {
+      visibility: visible;
+    }
+  }
+}

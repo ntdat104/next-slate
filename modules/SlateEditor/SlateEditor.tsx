@@ -31,8 +31,13 @@ import {
   MarkType,
 } from "../../custom-type";
 import imageExtensions from "image-extensions";
-import CHARACTERS from "./Characters.json";
 import ReactDOM from "react-dom";
+import Link from "next/link";
+import useDebounce from "../../hooks/use-debounce";
+import classNames from "classnames/bind";
+import styles from "./SlateEditor.module.scss";
+
+const cx = classNames.bind(styles);
 
 const ELEMENT_TAGS: any = {
   A: (el: any) => ({ type: "link", url: el.getAttribute("href") }),
@@ -91,6 +96,8 @@ const SlateEditor: React.FC<Props> = (props) => {
   const [target, setTarget] = React.useState<Range | null>(null);
   const [index, setIndex] = React.useState(0);
   const [search, setSearch] = React.useState("");
+  const [characters, setCharacters] = React.useState<any>([]);
+  const debouncedValue = useDebounce<string>(search, 300);
 
   const editor = React.useMemo<CustomEditor>(
     () =>
@@ -102,9 +109,33 @@ const SlateEditor: React.FC<Props> = (props) => {
     []
   );
 
-  const chars = CHARACTERS.filter((c) =>
-    c.toLowerCase().startsWith(search.toLowerCase())
-  ).slice(0, 10);
+  const chars = React.useMemo(
+    () =>
+      characters.map((item: any) => ({
+        id: item?.id,
+        username: item?.login,
+        fullName: item?.login.toUpperCase(),
+        avatarUrl: item?.avatar_url,
+      })),
+    [characters]
+  );
+
+  React.useEffect(() => {
+    if (!debouncedValue) return;
+
+    (async () => {
+      try {
+        const response = await fetch(
+          `https://api.github.com/search/users?q=${debouncedValue}&page=0&per_page=10`
+        );
+        const data = await response.json();
+
+        setCharacters(data?.items);
+      } catch (error) {
+        console.log(error);
+      }
+    })();
+  }, [debouncedValue]);
 
   React.useEffect(() => {
     if (target && chars.length > 0) {
@@ -150,7 +181,7 @@ const SlateEditor: React.FC<Props> = (props) => {
         case "Enter":
           event.preventDefault();
           Transforms.select(editor, target);
-          insertMention(editor, chars[index]);
+          insertMention(editor, chars[index]?.username);
           setTarget(null);
           break;
         case "Escape":
@@ -358,16 +389,18 @@ const SlateEditor: React.FC<Props> = (props) => {
             }}
             data-cy="mentions-portal"
           >
-            {chars.map((char, i) => (
+            {chars.map((char: any, i: number) => (
               <div
-                key={char}
+                key={i}
                 style={{
                   padding: "1px 3px",
                   borderRadius: "3px",
                   background: i === index ? "#B4D5FF" : "transparent",
                 }}
               >
-                {char}
+                <h1>{char.fullName}</h1>
+                <p>{char.username}</p>
+                <img src={char.avatarUrl} />
               </div>
             ))}
           </div>
@@ -927,23 +960,26 @@ const Mention: React.FC<RenderElementProps> = (props) => {
   const { attributes, children, element } = props;
   const selected = useSelected();
   const focused = useFocused();
+
   return (
-    <span
-      {...attributes}
-      contentEditable={false}
-      data-cy={`mention-${element.character?.replace(" ", "-")}`}
-      style={{
-        padding: "3px 3px 2px",
-        margin: "0 1px",
-        verticalAlign: "baseline",
-        display: "inline-block",
-        borderRadius: "4px",
-        backgroundColor: "#eee",
-        fontSize: "0.9em",
-        boxShadow: selected && focused ? "0 0 0 2px #B4D5FF" : "none",
-      }}
-    >
-      {children}@{element.character}
+    <span {...attributes} contentEditable={false}>
+      <Link
+        href={`https://api.github.com/users/${element.character}`}
+        passHref={true}
+      >
+        <a
+          className={cx("mention")}
+          target={`_blank`}
+          style={{
+            boxShadow: selected && focused ? "0 0 0 2px #B4D5FF" : "none",
+          }}
+        >
+          {children}@{element.character}
+          <div className={"tooltip"}>
+            <p>{element.character}</p>
+          </div>
+        </a>
+      </Link>
     </span>
   );
 };
@@ -970,6 +1006,7 @@ const insertMention = (editor: CustomEditor, character: string) => {
   };
   Transforms.insertNodes(editor, mention);
   Transforms.move(editor);
+  Transforms.insertText(editor, " ");
 };
 
 // -------------------- END_MENTION_PLUGIN --------------------//

@@ -1,10 +1,14 @@
 import type { NextPage } from "next";
 import React from "react";
 import { Descendant } from "slate";
-import SlateEditor from "../modules/SlateEditor";
 import dynamic from "next/dynamic";
 
 const ReactJson = dynamic(() => import("react-json-view"), {
+  loading: () => <p>Loading ...</p>,
+  ssr: false,
+});
+
+const SlateEditor = dynamic(() => import("../modules/SlateEditor"), {
   loading: () => <p>Loading ...</p>,
   ssr: false,
 });

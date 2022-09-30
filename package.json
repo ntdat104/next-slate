@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "classnames": "^2.3.2",
     "image-extensions": "^1.1.0",
     "is-hotkey": "^0.2.0",
     "is-url": "^1.2.4",
@@ -16,6 +17,7 @@
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-json-view": "^1.21.3",
+    "sass": "^1.55.0",
     "slate": "^0.82.1",
     "slate-history": "^0.66.0",
     "slate-hyperscript": "^0.77.0",
